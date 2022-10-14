@@ -39,28 +39,30 @@ enum class Betterness
 
 static double Cost(const model::Topology::Stats& stats, const std::string metric)
 {
+  double cost;
   if (metric == "delay")
   {
-    return static_cast<double>(stats.cycles);
+    cost = static_cast<double>(stats.cycles);
   }
   else if (metric == "energy")
   {
-    return stats.energy;
+    cost = stats.energy;
   }
   else if (metric == "last-level-accesses")
   {
-    return stats.last_level_accesses;
+    cost = stats.last_level_accesses;
   }
   else if (metric.compare(0, 9, "accesses-") == 0)
   {
     unsigned level = unsigned(atoi(metric.substr(9).c_str()));
-    return stats.accesses.at(level);
+    cost = stats.accesses.at(level);
   }
   else
   {
     assert(metric == "edp");
-    return (stats.energy * stats.cycles);
+    cost = (stats.energy * stats.cycles);
   }
+  return cost;
 }
 
 static Betterness IsBetterRecursive_(const model::Topology::Stats& candidate, const model::Topology::Stats& incumbent,
@@ -72,8 +74,14 @@ static Betterness IsBetterRecursive_(const model::Topology::Stats& candidate, co
   double candidate_cost = Cost(candidate, *metric);
   double incumbent_cost = Cost(incumbent, *metric);
 
-  double relative_improvement = incumbent_cost == 0 ? 1.0 :
-    (incumbent_cost - candidate_cost) / incumbent_cost;
+  // Compute % improvement relative to incumbent. We need to
+  // special-case cost == 0 to avoid a divide-by-zero error. Note that
+  // cost == 0 is a legitimate cost for a mapping. Also note that lower
+  // cost is better.
+  double absolute_improvement = incumbent_cost - candidate_cost;
+  double relative_improvement = incumbent_cost == 0 ?
+    (candidate_cost == 0 ? 0 : absolute_improvement / candidate_cost) :
+    absolute_improvement / incumbent_cost;
 
   if (fabs(relative_improvement) > tolerance)
   {
@@ -205,6 +213,7 @@ void MapperThread::Stats::UpdateFails(FailClass fail_class, std::string fail_rea
       if (roll < prob)
       {
         fail_info_it->second.mapping = mapping;
+        fail_info_it->second.reason = fail_reason;
       }
     }
   }
@@ -306,8 +315,8 @@ void MapperThread::Run()
 
       if (valid_mappings > 0)
       {
-        msg << std::setw(10) << std::fixed << std::setprecision(2) << (stats_.thread_best.stats.utilization * 100) << "%"
-            << std::setw(11) << std::fixed << PRINTFLOAT_PRECISION << stats_.thread_best.stats.energy /
+        msg << std::setw(10) << OUT_FLOAT_FORMAT << std::setprecision(2) << (stats_.thread_best.stats.utilization * 100) << "%"
+            << std::setw(11) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats_.thread_best.stats.energy /
           stats_.thread_best.stats.algorithmic_computes;
       }
 
@@ -568,17 +577,17 @@ void MapperThread::Run()
       if (is_sparse_topology)
       {      
         log_stream_ << "[" << std::setw(3) << thread_id_ << "]" 
-                  << " Utilization = " << std::setw(4) << std::fixed << std::setprecision(2) << stats.utilization 
-                  << " | pJ/Algorithmic-Compute = " << std::setw(4) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.algorithmic_computes
-                  << " | pJ/Compute = " << std::setw(4) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
+                  << " Utilization = " << std::setw(4) << OUT_FLOAT_FORMAT << std::setprecision(2) << stats.utilization 
+                  << " | pJ/Algorithmic-Compute = " << std::setw(4) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.algorithmic_computes
+                  << " | pJ/Compute = " << std::setw(4) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
                   << " | " << mapping.PrintCompact()
                   << std::endl;
       }
       else
       {
         log_stream_ << "[" << std::setw(3) << thread_id_ << "]" 
-                  << " Utilization = " << std::setw(4) << std::fixed << std::setprecision(2) << stats.utilization 
-                  << " | pJ/Compute = " << std::setw(4) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
+                  << " Utilization = " << std::setw(4) << OUT_FLOAT_FORMAT << std::setprecision(2) << stats.utilization 
+                  << " | pJ/Compute = " << std::setw(4) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
                   << " | " << mapping.PrintCompact()
                   << std::endl;
       }
@@ -609,17 +618,17 @@ void MapperThread::Run()
         if (is_sparse_topology)
         {      
           log_stream_ << "[" << std::setw(3) << thread_id_ << "]" 
-                    << " Utilization = " << std::setw(4) << std::fixed << std::setprecision(2) << stats.utilization 
-                    << " | pJ/Algorithmic-Compute = " << std::setw(8) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.algorithmic_computes
-                    << " | pJ/Compute = " << std::setw(8) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
+                    << " Utilization = " << std::setw(4) << OUT_FLOAT_FORMAT << std::setprecision(2) << stats.utilization 
+                    << " | pJ/Algorithmic-Compute = " << std::setw(8) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.algorithmic_computes
+                    << " | pJ/Compute = " << std::setw(8) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
                     << " | " << mapping.PrintCompact()
                     << std::endl;
         }
         else
         {
           log_stream_ << "[" << std::setw(3) << thread_id_ << "]" 
-                    << " Utilization = " << std::setw(4) << std::fixed << std::setprecision(2) << stats.utilization 
-                    << " | pJ/Compute = " << std::setw(8) << std::fixed << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
+                    << " Utilization = " << std::setw(4) << OUT_FLOAT_FORMAT << std::setprecision(2) << stats.utilization 
+                    << " | pJ/Compute = " << std::setw(8) << OUT_FLOAT_FORMAT << PRINTFLOAT_PRECISION << stats.energy / stats.actual_computes
                     << " | " << mapping.PrintCompact()
                     << std::endl;
         }        mutex_->unlock();

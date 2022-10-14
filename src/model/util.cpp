@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+/* Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,51 +25,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <iostream>
-#include <sys/stat.h>
+#include "model/util.hpp"
+#include <string.h>
 
-#include "util/args.hpp"
+// If both are false, fixed point is used
+bool gEnableScientificStatOutput = 
+    (getenv("TIMELOOP_OUTPUT_STAT_SCIENTIFIC") != NULL) &&
+    (strcmp(getenv("TIMELOOP_OUTPUT_STAT_SCIENTIFIC"), "0") != 0);
+bool gEnableDefaultFloatStatOutput = 
+    (getenv("TIMELOOP_OUTPUT_STAT_DEFAULT_FLOAT") != NULL) &&
+    (strcmp(getenv("TIMELOOP_OUTPUT_STAT_DEFAULT_FLOAT"), "0") != 0);
 
-bool ParseArgs(int argc, char* argv[],
-               std::vector<std::string>& input_files,
-               std::string& output_dir)
+namespace model
 {
-  // Very rudimentary argument parsing. The only recognized pattern is "-o <odir>"
-  // and a set of .yaml or .cfg files.
-  std::vector<std::string> input_args(argv + 1, argv + argc);
-  for (auto arg = input_args.begin(); arg != input_args.end(); arg++)
-  {
-    if (arg->compare("-o") == 0)
-    {
-      arg++;
-      output_dir = *arg;
-      struct stat info;
-      if (stat(output_dir.c_str(), &info) != 0)
-      {
-        std::cerr << "ERROR: cannot access output directory: " << output_dir << std::endl;
-        return false;
-      }
-      else if (!(info.st_mode & S_IFDIR))
-      {
-        std::cerr << "ERROR: non-existent output directory: " << output_dir << std::endl;
-        return false;
-      }
-    }
-    else if (arg->compare("timeloop-mapper.map.yaml") == 0)
-    {
-      std::cerr << "WARNING: found timeloop-mapper.map.yaml in input file list, ignoring."
-                << std::endl;
-    }
-    else
-    {
-      input_files.push_back(*arg);
-    }
-  }
 
-  for (auto& file: input_files)
-  {
-    std::cout << "input file: " << file << std::endl;
-  }
+  bool enableScientificStatOutput = gEnableScientificStatOutput;
+  bool enableDefaultFloatStatOutput = gEnableDefaultFloatStatOutput;
 
-  return true;
-}
+} // namespace model

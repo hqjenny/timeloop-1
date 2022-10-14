@@ -123,6 +123,27 @@ BufferLevel::Specs BufferLevel::ParseSpecs(config::CompoundConfigNode level, std
     buffer = buffer.lookup("attributes");
   }
 
+  // Fill and drain latency of the MACs 
+  unsigned long long network_fill_latency;
+  if (buffer.lookupValue("network_fill_latency", network_fill_latency))
+  {
+    specs.network_fill_latency = network_fill_latency;
+  }
+  else
+  {
+    specs.network_fill_latency = 0;
+  }
+
+  unsigned long long network_drain_latency;
+  if (buffer.lookupValue("network_drain_latency", network_drain_latency))
+  {
+    specs.network_drain_latency = network_drain_latency;
+  }
+  else
+  {
+    specs.network_drain_latency = 0;
+  }
+
   // Word Bits.
   std::uint32_t word_bits;
   if (buffer.lookupValue("word-bits", word_bits) ||
@@ -303,7 +324,7 @@ BufferLevel::Specs BufferLevel::ParseSpecs(config::CompoundConfigNode level, std
   }
   else if (buffer.lookupValue("sizeKB", size))
   {
-    specs.size = size * 1024 * 8 / specs.word_bits.Get();
+    specs.size = std::uint64_t(size) * 1024 * 8 / specs.word_bits.Get();
   }
 
   std::uint32_t metadata_storage_size = 0;

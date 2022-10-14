@@ -63,12 +63,16 @@ class LegacyNetwork : public Network
     Attribute<double> tile_width; // um
     Attribute<double> energy_per_hop; //pJ
 
+    // Network fill and drain latency
+    Attribute<std::uint64_t> fill_latency;
+    Attribute<std::uint64_t> drain_latency;
+  
     Attribute<bool> is_sparse_module;
     
     const std::string Type() const override { return type; }
     bool SupportAccelergyTables() const override { return false; }
     void ProcessERT(const config::CompoundConfigNode& ERT) override;
-    
+
     // Serialization
     friend class boost::serialization::access;
 
@@ -83,6 +87,8 @@ class LegacyNetwork : public Network
         ar& BOOST_SERIALIZATION_NVP(wire_energy);
         ar& BOOST_SERIALIZATION_NVP(tile_width);
         ar& BOOST_SERIALIZATION_NVP(energy_per_hop);
+        ar& BOOST_SERIALIZATION_NVP(fill_latency);
+        ar& BOOST_SERIALIZATION_NVP(drain_latency);
       }
     }
 
@@ -109,6 +115,11 @@ class LegacyNetwork : public Network
     problem::PerDataSpace<double> energy_per_hop;
     problem::PerDataSpace<double> energy;
     problem::PerDataSpace<double> spatial_reduction_energy;
+
+    // Network fill and drain latency, can be set by the spec or inferred from outer buffer
+    // network_fill_latency and network_drain_latency
+    std::uint64_t fill_latency;
+    std::uint64_t drain_latency;
 
     // Redundant stats with outer buffer.
     problem::PerDataSpace<std::uint64_t> utilized_instances;    
@@ -178,6 +189,8 @@ class LegacyNetwork : public Network
     return std::static_pointer_cast<Network>(std::make_shared<LegacyNetwork>(*this));
   }
 
+  Specs& GetSpecs() { return specs_; }
+
   static Specs ParseSpecs(config::CompoundConfigNode network, std::size_t n_elements, bool is_sparse_module);
 
   void ConnectSource(std::weak_ptr<Level> source);
@@ -201,6 +214,11 @@ class LegacyNetwork : public Network
   void ComputePerformance();
 
   std::uint64_t WordBits() const;
+  std::uint64_t FillLatency() const override;
+  std::uint64_t DrainLatency() const override;
+
+  void SetFillLatency(std::uint64_t fill_latency) override;
+  void SetDrainLatency(std::uint64_t drain_latency) override;
 
   void Print(std::ostream& out) const;
 

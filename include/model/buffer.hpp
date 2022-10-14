@@ -110,6 +110,11 @@ class BufferLevel : public Level
     Attribute<std::uint64_t> num_banks;
     Attribute<bool> reduction_supported;
 
+    // If the inner fill network is inferred, 
+    // use the following fill and drain latency for the network
+    Attribute<std::uint64_t> network_fill_latency;
+    Attribute<std::uint64_t> network_drain_latency;
+
     // compression related
     Attribute<bool> concordant_compressed_tile_traversal;
     Attribute<bool> tile_partition_supported;
